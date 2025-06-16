@@ -1,4 +1,19 @@
-import postgres from 'postgres';
+import postgres, { TransactionSql } from 'postgres';
+
+// Configuración básica de conexión
+const sql = postgres(process.env.DATABASE_URL!, {
+  ssl: 'require',
+  transform: {
+    undefined: null // Convierte undefined a NULL en consultas
+  }
+});
+
+// Exportamos tanto la conexión como el tipo para transacciones
+export { sql };
+export type { TransactionSql };
+
+
+/* import postgres from 'postgres';
 import {
   CustomerField,
   CustomersTableType,
@@ -9,7 +24,7 @@ import {
 } from './definitions';
 import { formatCurrency } from './utils';
 
-const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
+const sql = postgres(process.env.DATABASE_URL!, { ssl: { rejectUnauthorized: false } });
 
 export async function fetchRevenue() {
   try {
@@ -216,3 +231,4 @@ export async function fetchFilteredCustomers(query: string) {
     throw new Error('Failed to fetch customer table.');
   }
 }
+ */

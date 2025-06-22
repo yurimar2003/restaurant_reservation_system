@@ -5,7 +5,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { saveSession } from '../lib/session';
-import { EnvelopeIcon } from '@heroicons/react/24/outline';
+import { FaUser } from "react-icons/fa";
+import ButtonHome from '../components/ButtonHome';
 
 const LoginPage = () => {
     const { login } = useAuth();
@@ -51,21 +52,11 @@ const LoginPage = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-rose-100">
-            {/* Botón de atrás */}
-            <button
-                type="button"
-                onClick={() => router.push('/')}
-                className="absolute top-6 left-6 z-20 bg-white rounded-full p-2 shadow hover:bg-gray-100 transition-colors"
-                aria-label="Volver al inicio"
-            >
-                <svg className="w-7 h-7 text-rose-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-            </button>
+            <ButtonHome/>
             <div className="bg-white rounded-2xl shadow-lg px-8 py-10 w-full max-w-md mx-4">
                 <div className="flex flex-col items-center mb-8">
                     <div className="bg-rose-600 p-3 rounded-full mb-4">
-                        <EnvelopeIcon className="h-10 w-10 text-white" />
+                        <FaUser className="h-10 w-10 text-white" />
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900 mb-2 text-center">
                         Iniciar Sesión
@@ -116,9 +107,9 @@ const LoginPage = () => {
                     </button>
                 </form>
                 <div className="mt-4 text-center text-sm text-gray-600">
-                    ¿No tienes cuenta?{' '}
-                    <Link href="/register" className="text-rose-600 hover:underline">
-                        Regístrate
+                    ¿Olvidaste tu contraseña?{' '}
+                    <Link href="/LostPassword" className="text-rose-600 hover:underline">
+                        Recuperar contraseña
                     </Link>
                 </div>
             </div>

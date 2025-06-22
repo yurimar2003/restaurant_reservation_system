@@ -1,12 +1,11 @@
-// app/api/users/update/route.ts
 import { sql } from './../../../lib/data';
 import { NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
 
 export async function PUT(request: Request) {
   try {
-    const { userId, ...updateData } = await request.json();
+    const { userId, password, ...updateData } = await request.json();
 
-    // Validación básica
     if (!userId) {
       return NextResponse.json(
         { error: 'ID de usuario requerido' },
@@ -14,9 +13,36 @@ export async function PUT(request: Request) {
       );
     }
 
-    // Construir la consulta de forma segura
+    // Si solo se quiere actualizar la contraseña
+    if (password) {
+      if (typeof password !== 'string' || password.length < 8) {
+        return NextResponse.json(
+          { error: 'La contraseña debe tener al menos 8 caracteres.' },
+          { status: 400 }
+        );
+      }
+      const hashed = await bcrypt.hash(password, 10);
+      const result = await sql.unsafe(
+        `
+        UPDATE users
+        SET password = $1
+        WHERE id = $2
+        RETURNING id
+        `,
+        [hashed, userId]
+      );
+      if (result.length === 0) {
+        return NextResponse.json(
+          { error: 'Usuario no encontrado' },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // Actualización de otros campos
     const validFields = [
-      'name', 'lastName', 'phone', 'age', 
+      'name', 'lastName', 'phone', 'age',
       'gender', 'birthDate', 'location'
     ];
 
@@ -39,14 +65,17 @@ export async function PUT(request: Request) {
       );
     }
 
-    // Añadir userId al final para WHERE
     values.push(userId);
 
     const query = `
       UPDATE users
       SET ${updates.join(', ')}
       WHERE id = $${paramIndex}
-      RETURNING id, name, email, role
+      RETURNING 
+        id, name, email, role, phone, age, gender,
+        lastname AS "lastName",
+        birthdate AS "birthDate",
+        location
     `;
 
     const result = await sql.unsafe(query, values);
@@ -58,9 +87,13 @@ export async function PUT(request: Request) {
       );
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      user: result[0]
+      user: {
+        ...result[0],
+        lastName: result[0].lastName,
+        birthDate: result[0].birthDate
+      }
     });
 
   } catch (error) {

@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ButtonHome from "../components/ButtonHome";
+import { FaUserPlus } from "react-icons/fa";
 
 const RegisterPage = () => {
     const [showPassword, setShowPassword] = useState(false);
@@ -76,24 +78,17 @@ const RegisterPage = () => {
       };
 
     return (
-        <div className="relative flex items-center justify-center min-h-screen bg-cover bg-center"
-            style={{
-                backgroundImage: "url('/customers/login-background.jpg')",
-            }}>
-            {/* Botón de atrás */}
-            <button
-                type="button"
-                onClick={() => router.push('/')}
-                className="absolute top-6 left-6 z-20 bg-white rounded-full p-2 shadow hover:bg-gray-100 transition-colors"
-                aria-label="Volver al inicio"
-            >
-                <svg className="w-7 h-7 text-rose-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-            </button>
-            <div className="absolute inset-0 bg-black opacity-50"></div>
-            <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md z-10">
-                <h1 className="text-2xl font-bold text-center text-rose-600 mb-6">Regístrate</h1>
+        <div className="min-h-screen flex items-center justify-center bg-rose-100">
+            <ButtonHome/>
+            <div className="bg-white rounded-2xl shadow-lg px-8 py-10 w-full max-w-md mx-4">
+                <div className="flex flex-col items-center mb-8">
+                    <div className="bg-rose-600 pl-3.5 pr-2 pt-3 pb-3 rounded-full mb-4">
+                        <FaUserPlus className="h-11 w-11 text-white" />
+                    </div>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2 text-center">
+                        Registrate
+                    </h1>
+                </div>
                 
                 {error && (
                     <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
@@ -103,13 +98,13 @@ const RegisterPage = () => {
 
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700" htmlFor="name">
-                            Nombre y Apellido
+                        <label className="block text-gray-700 font-medium mb-1" htmlFor="name">
+                            Primer nombre
                         </label>
                         <input
                             type="text"
                             id="name"
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-rose-600 focus:border-rose-600"
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400"
                             placeholder="Ingresa tu nombre"
                             value={formData.name}
                             onChange={handleChange}
@@ -117,13 +112,13 @@ const RegisterPage = () => {
                         />
                     </div>
                     <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700" htmlFor="email">
-                            Email
+                        <label className="block text-gray-700 font-medium mb-1" htmlFor="email">
+                            Email<span className="ml-2 text-xs text-gray-400 align-middle">(Este campo no podrás editarlo)</span>
                         </label>
                         <input
                             type="email"
                             id="email"
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-rose-600 focus:border-rose-600"
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400"
                             placeholder="Ingresa tu email"
                             value={formData.email}
                             onChange={handleChange}
@@ -131,13 +126,13 @@ const RegisterPage = () => {
                         />
                     </div>
                     <div className="mb-4 relative">
-                        <label className="block text-sm font-medium text-gray-700" htmlFor="password">
+                        <label className="block text-gray-700 font-medium mb-1" htmlFor="password">
                             Contraseña
                         </label>
                         <input
                             type={showPassword ? "text" : "password"}
                             id="password"
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-rose-600 focus:border-rose-600"
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400"
                             placeholder="Ingresa tu contraseña"
                             value={formData.password}
                             onChange={handleChange}
@@ -153,13 +148,13 @@ const RegisterPage = () => {
                         </button>
                     </div>
                     <div className="mb-4 relative">
-                        <label className="block text-sm font-medium text-gray-700" htmlFor="confirmPassword">
-                            Confirmar Contraseña
+                        <label className="block text-gray-700 font-medium mb-1" htmlFor="confirmPassword">
+                            Confirmar contraseña
                         </label>
                         <input
                             type={showConfirmPassword ? "text" : "password"}
                             id="confirmPassword"
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-rose-600 focus:border-rose-600"
+                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400"
                             placeholder="Confirma tu contraseña"
                             value={formData.confirmPassword}
                             onChange={handleChange}
@@ -176,13 +171,13 @@ const RegisterPage = () => {
                     </div>
                     <button
                         type="submit"
-                        className="w-full bg-rose-600 text-white py-2 px-4 rounded-md hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-600 focus:ring-offset-2 disabled:opacity-50"
+                        className="w-full bg-rose-600 hover:bg-rose-700 transition-colors text-white font-semibold py-3 rounded-lg shadow-sm"
                         disabled={isLoading}
                     >
                         {isLoading ? "Registrando..." : "Registrarme"}
                     </button>
                 </form>
-                <p className="text-center text-gray-600 mt-4">
+                <p className="mt-4 text-center text-sm text-gray-600">
                     ¿Ya estás registrado?{" "}
                     <Link
                         href="/login"

@@ -4,6 +4,19 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { getSession, clearSession, saveSession } from '../lib/session';
 import { useRouter } from 'next/navigation';
 
+const transformUserFromDB = (dbUser: any): User => ({
+  id: dbUser.id,
+  name: dbUser.name,
+  lastName: dbUser.lastname || dbUser.lastName,
+  email: dbUser.email,
+  role: dbUser.role,
+  phone: dbUser.phone,
+  age: dbUser.age,
+  gender: dbUser.gender,
+  birthDate: dbUser.birthdate || dbUser.birthDate,
+  location: dbUser.location
+});
+
 type User = {
   id: number;
   name: string;
@@ -15,6 +28,7 @@ type User = {
   gender?: string;
   birthDate?: string;
   location?: string;
+  password?: string; // Para updateUser
 };
 
 type AuthContextType = {
@@ -35,14 +49,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const savedUser = getSession();
     if (savedUser) {
-      setUser(savedUser);
+      setUser(transformUserFromDB(savedUser));
     }
     setIsLoading(false);
   }, []);
 
   const login = (userData: User) => {
-    setUser(userData);
-    saveSession(userData);
+    const transformedUser = transformUserFromDB(userData);
+    setUser(transformedUser);
+    saveSession(transformedUser);
   };
 
   const logout = () => {
@@ -74,17 +89,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: data.error || 'Error desconocido' };
       }
 
-      // Actualizar el estado local
-      const updatedUser = { ...user, ...updatedData };
+      // Si solo se actualiza la contraseña, no actualices el usuario en sesión
+      if ('password' in updatedData) {
+        return { success: true };
+      }
+
+      const updatedUser = transformUserFromDB({
+        ...user,
+        ...data.user || data
+      });
+
       setUser(updatedUser);
       saveSession(updatedUser);
 
       return { success: true };
     } catch (error) {
       console.error('Error al actualizar usuario:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Error de conexión' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error de conexión'
       };
     }
   };

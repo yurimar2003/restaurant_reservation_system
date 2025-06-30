@@ -1,52 +1,116 @@
 'use client';
 
 import React, { useState } from "react";
-import Link from "next/link";
 import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { useAuth } from "../components/AuthProvider";
+import { validateReservation } from "../lib/validations/reservation"; 
+import { sanitizeNameInput, sanitizePhoneInput, validateRealTime } from "../lib/validations";
+
+// --- Funciones auxiliares ---
+function formatDateForInput(dateString: string) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  const timezoneOffset = date.getTimezoneOffset() * 60000;
+  const adjustedDate = new Date(date.getTime() + timezoneOffset);
+  const year = adjustedDate.getFullYear();
+  const month = String(adjustedDate.getMonth() + 1).padStart(2, '0');
+  const day = String(adjustedDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 const ReservationsPage = () => {
+    const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [formData, setFormData] = useState({
-        name: "",
-        phone: "",
-        email: "",
+        name: '',
+        lastName: '',
+        phone: '',
+        email: '',
         guests: 1,
-        date: "",
-        time: "",
-        mealType: "",
-        area: "",
+        date: '',
+        time: '',
+        mealType: '',
+        area: '',
         specialRequests: {
             wheelchairAccessible: false,
             quietZone: false,
             nearWindow: false,
         },
-        comments: "",
+        comments: '',
         acceptPolicies: false,
     });
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value, type } = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
-        if (type === "checkbox" && e.target instanceof HTMLInputElement) {
-            const { checked } = e.target;
+    const { user } = useAuth(); //obtener usuario autenticado para ser mostrado en el formulario
+    React.useEffect(() => {
+        if (user) {
             setFormData((prev) => ({
                 ...prev,
-                specialRequests: {
-                    ...prev.specialRequests,
-                    [name]: checked,
-                },
-            }));
-        } else {
-            setFormData((prev) => ({
-                ...prev,
-                [name]: value,
+                name: user.name || '',
+                lastName: user.lastName || '',
+                phone: user.phone || '',
+                email: user.email || '',
             }));
         }
+    }, [user]);
+
+    const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    ) => {
+    const { name, value, type } = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+    let newValue = value;
+
+    // Sanitización y validación en tiempo real
+    if (name === "name" || name === "lastName") {
+        newValue = sanitizeNameInput(value);
+        setErrors((prev) => ({
+        ...prev,
+        [name]: validateRealTime(name, newValue)
+        }));
+    } else if (name === "phone") {
+        newValue = sanitizePhoneInput(value);
+        setErrors((prev) => ({
+        ...prev,
+        [name]: validateRealTime(name, newValue)
+        }));
+    } else {
+        setErrors((prev) => ({
+        ...prev,
+        [name]: ""
+        }));
+    }
+
+    // Manejo de checkboxes especiales
+    if (
+        type === "checkbox" &&
+        ["wheelchairAccessible", "quietZone", "nearWindow"].includes(name)
+    ) {
+        setFormData((prev) => ({
+        ...prev,
+        specialRequests: {
+            ...prev.specialRequests,
+            [name]: (e.target as HTMLInputElement).checked,
+        },
+        }));
+    } else if (type === "checkbox" && name === "acceptPolicies") {
+        setFormData((prev) => ({
+        ...prev,
+        acceptPolicies: (e.target as HTMLInputElement).checked,
+        }));
+    } else {
+        setFormData((prev) => ({
+        ...prev,
+        [name]: newValue,
+        }));
+    }
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.acceptPolicies) {
-            alert("Debes aceptar las políticas de cancelación.");
+        const newErrors = validateReservation(formData);
+        setErrors(newErrors);
+
+        if (Object.keys(newErrors).length > 0) {
             return;
         }
         console.log("Reserva confirmada:", formData);
@@ -84,21 +148,38 @@ const ReservationsPage = () => {
                             onChange={handleInputChange}
                             className="w-full p-2 border rounded text-gray-700"
                         />
+                        {errors.name && <span className="text-red-500 text-xs">{errors.name}</span>}
                         <input
-                            type="tel"
-                            name="phone"
-                            placeholder="Teléfono de contacto"
-                            value={formData.phone}
+                            type="text"
+                            name="lastName"
+                            placeholder="Apellido"
+                            value={formData.lastName}
                             onChange={handleInputChange}
                             className="w-full p-2 border rounded text-gray-700"
-                            required
                         />
+                        {errors.lastName && <span className="text-red-500 text-xs">{errors.lastName}</span>}
+                        <div>
+                            <div className="flex">
+                                <span className="inline-flex items-center px-2 bg-gray-100 border border-r-0 border-gray-300 rounded-l">+58</span>
+                                <input
+                                type="tel"
+                                name="phone"
+                                placeholder="Teléfono de contacto"
+                                value={formData.phone}
+                                onChange={handleInputChange}
+                                className="w-full p-2 border rounded text-gray-700 rounded-r"
+                                required
+                                />
+                            </div>
+                            {errors.phone && <span className="text-red-500 text-xs">{errors.phone}</span>}
+                        </div>
                         <input
                             type="email"
                             name="email"
                             placeholder="Correo electrónico"
                             value={formData.email}
                             onChange={handleInputChange}
+                            disabled
                             className="w-full p-2 border rounded text-gray-700"
                         />
                         <select
@@ -114,6 +195,7 @@ const ReservationsPage = () => {
                             ))}
                         </select>
                     </div>
+                    {errors.guests && <span className="text-red-500 text-xs">{errors.guests}</span>}
 
                     {/* Detalles de la Reserva */}
                     <div className="space-y-4">
@@ -133,7 +215,8 @@ const ReservationsPage = () => {
                                         className="w-full p-2 border rounded text-gray-700 cursor-pointer"
                                         onFocus={(e) => e.target.blur()} // Prevent manual typing
                                     />
-                                    <div className="mt-2">
+                                    {errors.date && <span className="text-red-500 text-xs">{errors.date}</span>}
+                                    <div className="mt-8">
                                         <ReactDatePicker
                                             selected={formData.date ? new Date(formData.date) : null}
                                             onChange={(date: Date | null) => {
@@ -154,7 +237,7 @@ const ReservationsPage = () => {
 
                             {/* Selector de Tipo de Comida */}
                             <div className="w-full">
-                                <label className="block text-gray-700 mb-2">Tipo de comida</label>
+                                <label className="block text-gray-700 mb-2">Elija el servicio deseado</label>
                                 <select
                                     name="mealType"
                                     value={formData.mealType}
@@ -168,11 +251,12 @@ const ReservationsPage = () => {
                                     }}
                                     className="w-full p-2 border rounded text-gray-700"
                                 >
-                                    <option value="">Tipo de comida</option>
+                                    <option value="">Servio</option>
                                     <option value="brunch">Brunch</option>
                                     <option value="lunch">Almuerzo</option>
                                     <option value="dinner">Cena</option>
                                 </select>
+                                {errors.mealType && <span className="text-red-500 text-xs">{errors.mealType}</span>}
                             </div>
 
                             {/* Selector de Hora */}
@@ -216,8 +300,8 @@ const ReservationsPage = () => {
                                         </>
                                     )}
                                 </select>
+                                {errors.time && <span className="text-red-500 text-xs">{errors.time}</span>}
                             </div>
-                            
                         </div>
                     </div>
 
@@ -235,6 +319,7 @@ const ReservationsPage = () => {
                             <option value="interior">Interior</option>
                             <option value="bar">Barra</option>
                         </select>
+                        {errors.area && <span className="text-red-500 text-xs">{errors.area}</span>}
                         <div className="flex items-center space-x-2">
                             <input
                                 type="checkbox"
@@ -287,7 +372,7 @@ const ReservationsPage = () => {
                     <h2 className="text-xl font-bold text-gray-800 text-center">Detalles de tu Reserva</h2>
                     <div className="border-t border-gray-300 pt-4 space-y-2">
                         {renderDetail("Nombre", formData.name)}
-                        {renderDetail("Teléfono", formData.phone)}
+                        {renderDetail("Teléfono", "+58 "+ formData.phone)}
                         {renderDetail("Correo", formData.email)}
                         {renderDetail("Comensales", formData.guests.toString())}
                         {renderDetail("Fecha", formData.date)}
@@ -316,6 +401,7 @@ const ReservationsPage = () => {
                         />
                         <label className="text-gray-700">Acepto las políticas de cancelación</label>
                     </div>
+                    {errors.acceptPolicies && <span className="text-red-500 text-xs">{errors.acceptPolicies}</span>}
                 </div>
             </div>
         </div>

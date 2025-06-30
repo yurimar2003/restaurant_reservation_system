@@ -4,6 +4,12 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../components/AuthProvider';
 import { useRouter } from 'next/navigation';
 import Loading from './loading';
+import { sanitizeAgeInput, sanitizeNameInput, sanitizePhoneInput, validateProfile, validateRealTime } from '../lib/validations/profile';
+
+
+import { 
+  isValidPassword,
+} from '../lib/validations/index';
 
 // --- Funciones auxiliares ---
 function formatDateForInput(dateString: string) {
@@ -18,27 +24,6 @@ function formatDateForInput(dateString: string) {
   return `${year}-${month}-${day}`;
 }
 
-// --- Validaciones ---
-function isValidName(value: string) {
-  return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value);
-}
-function isValidPhone(value: string) {
-  return /^(\+58)?\d{10}$/.test(value); // +58 y 10 dígitos
-}
-function isValidAge(value: string) {
-  const age = Number(value);
-  return age >= 18 && age <= 95;
-}
-function isValidBirthDate(value: string) {
-  if (!value) return false;
-  const today = new Date();
-  const inputDate = new Date(value);
-  return inputDate <= today;
-}
-function isValidPassword(value: string) {
-  // Mínimo 8 caracteres, al menos una letra y un número
-  return /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(value);
-}
 
 export default function PerfilPage() {
   const [loading, setLoading] = useState(true);
@@ -47,6 +32,7 @@ export default function PerfilPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const { user, isLoading: authLoading, updateUser, logout } = useAuth();
   const router = useRouter();
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [formData, setFormData] = useState({
     name: '',
     lastName: '',
@@ -58,7 +44,6 @@ export default function PerfilPage() {
     birthDate: '',
     location: '',
   });
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   // Para el cambio de contraseña
   const [passwords, setPasswords] = useState({ password: '', confirm: '' });
@@ -91,59 +76,48 @@ export default function PerfilPage() {
     const { name, value } = e.target;
     let newValue = value;
 
-    // Validaciones en tiempo real
-    if (name === 'name' || name === 'lastName') {
-      if (!isValidName(newValue) && newValue !== '') return;
-    }
-    if (name === 'phone') {
-      // Solo números, máximo 10 dígitos (sin el +58)
-      newValue = newValue.replace(/\D/g, '').slice(0, 10);
-    }
-    if (name === 'age') {
-      // Solo números, máximo 2 dígitos
-      newValue = newValue.replace(/\D/g, '').slice(0, 2);
-    }
-    if (name === 'birthDate') {
-      // No permitir fechas futuras
-      if (!isValidBirthDate(newValue)) {
-        setErrors(prev => ({ ...prev, birthDate: 'La fecha no puede ser futura' }));
-      } else {
-        setErrors(prev => ({ ...prev, birthDate: '' }));
-      }
+    // Sanitización en tiempo real
+    switch (name) {
+      case 'name':
+      case 'lastName':
+        newValue = sanitizeNameInput(value);
+        break;
+      case 'phone':
+        newValue = sanitizePhoneInput(value);
+        break;
+      case 'age':
+        newValue = sanitizeAgeInput(value);
+        break;
     }
 
+    // Actualiza el formulario
     setFormData(prev => ({
       ...prev,
       [name]: newValue
     }));
+
+    // Validación en tiempo real con feedback
+    if (['name', 'lastName', 'phone', 'age', 'birthDate'].includes(name)) {
+      const errorMessage = validateRealTime(name, newValue);
+      setErrors(prev => ({
+        ...prev,
+        [name]: errorMessage
+      }));
+    }
   };
 
   // --- Validación al enviar ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newErrors: { [key: string]: string } = {};
+    // Validación de todos los campos
+    const newErrors = validateProfile(formData);
 
-    if (!formData.name || !isValidName(formData.name)) {
-      newErrors.name = 'Nombre inválido';
-    }
-    if (!formData.lastName || !isValidName(formData.lastName)) {
-      newErrors.lastName = 'Apellido inválido';
-    }
-    if (!formData.phone || !isValidPhone(formData.phone)) {
-      newErrors.phone = 'Debe ser un número venezolano (+58 y 10 dígitos)';
-    }
-    if (!formData.age || !isValidAge(formData.age)) {
-      newErrors.age = 'Edad debe ser entre 18 y 95 años';
-    }
-    if (!formData.birthDate || !isValidBirthDate(formData.birthDate)) {
-      newErrors.birthDate = 'Fecha inválida';
-    }
-    if (!formData.name || !formData.email) {
-      newErrors.email = 'Nombre y email son requeridos';
-    }
-
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
+    // Filtra los valores undefined para cumplir con el tipo esperado por setErrors
+    const filteredErrors = Object.fromEntries(
+      Object.entries(newErrors).filter(([_, v]) => typeof v === 'string' && v !== undefined)
+    ) as { [key: string]: string };
+    setErrors(filteredErrors);
+    if (Object.keys(filteredErrors).length > 0) return;
 
     const { success, error } = await updateUser({
       ...formData,
@@ -342,7 +316,22 @@ export default function PerfilPage() {
                 <button
                   type="button"
                   className="bg-gray-700 text-white px-6 py-2 rounded shadow border border-gray-400 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                  onClick={() => setIsEditing(false)}
+                  onClick={() => {
+                  // Restaurar los datos originales del usuario desde la BD
+                  setFormData({
+                    name: user?.name || '',
+                    lastName: user?.lastName || '',
+                    email: user?.email || '',
+                    role: user?.role || '',
+                    phone: user?.phone || '',
+                    age: user?.age ? String(user.age) : '',
+                    gender: user?.gender || '',
+                    birthDate: user?.birthDate ? formatDateForInput(user.birthDate) : '',
+                    location: user?.location || '',
+                  });
+                  setErrors({});
+                  setIsEditing(false);
+                  }}
                 >
                   Cancelar
                 </button>

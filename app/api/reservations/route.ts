@@ -20,3 +20,54 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("user_id");
+
+    let result;
+    if (userId) {
+      result = await sql`
+        SELECT 
+          r.id,
+          r.customer_name AS usuario,
+          r.customer_phone AS numero_celular,
+          r.date AS fecha,
+          r.time AS hora,
+          r.people AS comensales,
+          mt.name AS tipo_comida,
+          da.name AS area_preferencial,
+          r.comments AS comentario,
+          r.status AS estado
+        FROM reservations r
+
+        LEFT JOIN meal_types mt ON r.meal_type_id = mt.id
+        LEFT JOIN dining_areas da ON r.area_preference_id = da.id
+        WHERE user_id = ${userId}
+        ORDER BY r.date DESC, r.time DESC
+      `;
+    } else {
+      result = await sql`
+        SELECT 
+          id,
+          customer_name AS usuario,
+          customer_phone AS numero_celular,
+          date AS fecha,
+          time AS hora,
+          people AS comensales,
+          meal_type_id AS tipo_comida,
+          area_preference_id AS area_preferencial,
+          comments AS comentario,
+          status AS estado
+        FROM reservations
+        ORDER BY date DESC, time DESC
+      `;
+    }
+
+    return NextResponse.json(result);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+  }
+}

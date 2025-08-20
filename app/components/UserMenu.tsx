@@ -21,22 +21,30 @@ export default function UserMenu({
             alt="Logo"
             className="h-auto w-36 object-contain mx-auto"  
           />
+          <Link href="/create-reservations" className="text-md font-medium text-white border border-white rounded-full px-4 py-2 mx-5 transition-all hover:scale-105 hover:shadow-lg">
+              ¡Reserva Ahora!
+          </Link>
         </div>
         
         <ul className="flex items-center gap-6">
           <li>
-            <Link href="/" className="font-semibold text-white hover:text-blue-500">
+            <Link href="/" className="font-semibold text-white hover:text-rose-200">
               Inicio
             </Link>
           </li>
-          <li>
-            <Link href="/reservations" className="font-semibold text-white hover:text-blue-500">
+{/*           <li>
+            <Link href="/create-reservations" className="font-semibold text-white hover:text-rose-200">
               ¡Reserva Ahora!
+            </Link>
+          </li> */}
+          <li>
+            <Link href="/perfil" className="font-semibold text-white hover:text-rose-200">
+              Perfil
             </Link>
           </li>
           <li>
-            <Link href="/perfil" className="font-semibold text-white hover:text-blue-500">
-              Mi Perfil
+            <Link href="/reservations" className="font-semibold text-white hover:text-rose-200">
+              Mis reservas
             </Link>
           </li>
         </ul>
@@ -45,7 +53,7 @@ export default function UserMenu({
           <span className="text-white font-medium">Hola, {user?.name}</span>
           <button
             onClick={logout}
-            className="text-md font-medium text-white hover:text-rose-200 border border-white rounded-full px-4 py-2 transition-all hover:scale-105 hover:shadow-lg"
+            className="text-md font-medium text-white border border-white rounded-full px-4 py-2 transition-all hover:scale-105 hover:shadow-lg"
           >
             Cerrar Sesión
           </button>

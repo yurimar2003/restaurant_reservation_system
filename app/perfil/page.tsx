@@ -10,6 +10,7 @@ import { sanitizeAgeInput, sanitizeNameInput, sanitizePhoneInput, validateProfil
 import { 
   isValidPassword,
 } from '../lib/validations/index';
+import { toast } from 'sonner';
 
 // --- Funciones auxiliares ---
 function formatDateForInput(dateString: string) {
@@ -22,6 +23,26 @@ function formatDateForInput(dateString: string) {
   const month = String(adjustedDate.getMonth() + 1).padStart(2, '0');
   const day = String(adjustedDate.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+// Calcula la edad a partir de la fecha de nacimiento (años completos)
+function calculateAgeFromDate(birthDateString: string) {
+  if (!birthDateString) return '';
+  // Parse YYYY-MM-DD explicitly to avoid timezone shifts when using Date(string)
+  const parts = birthDateString.split('-');
+  if (parts.length !== 3) return '';
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) return '';
+  const dob = new Date(year, month, day);
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+    age--;
+  }
+  return age;
 }
 
 
@@ -38,6 +59,16 @@ export default function PerfilPage() {
     lastName: '',
     email: '',
     role: '',
+    phone: '',
+    age: '',
+    gender: '',
+    birthDate: '',
+    location: '',
+  });
+  // Snapshot del formulario cuando se carga el usuario (para detectar cambios)
+  const [initialForm, setInitialForm] = useState({
+    name: '',
+    lastName: '',
     phone: '',
     age: '',
     gender: '',
@@ -61,6 +92,15 @@ export default function PerfilPage() {
         lastName: user.lastName || '',
         email: user.email || '',
         role: user.role || '',
+        phone: user.phone || '',
+        age: user.age ? String(user.age) : '',
+        gender: user.gender || '',
+        birthDate: user.birthDate ? formatDateForInput(user.birthDate) : '',
+        location: user.location || '',
+      });
+      setInitialForm({
+        name: user.name || '',
+        lastName: user.lastName || '',
         phone: user.phone || '',
         age: user.age ? String(user.age) : '',
         gender: user.gender || '',
@@ -106,9 +146,30 @@ export default function PerfilPage() {
     }
   };
 
+  // Calcula y actualiza la edad automáticamente cuando cambia `birthDate`.
+  useEffect(() => {
+    const bd = formData.birthDate;
+    if (bd) {
+      const ageNum = calculateAgeFromDate(bd);
+      setFormData(prev => ({ ...prev, age: ageNum !== '' ? String(ageNum) : '' }));
+      const ageError = validateRealTime('age', ageNum !== '' ? String(ageNum) : '');
+      setErrors(prev => ({ ...prev, age: ageError }));
+    } else {
+      setFormData(prev => ({ ...prev, age: '' }));
+      setErrors(prev => ({ ...prev, age: '' }));
+    }
+  }, [formData.birthDate]);
+
   // --- Validación al enviar ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Evitar update si no hay cambios en campos relevantes
+    const keysToCompare = ['name', 'lastName', 'phone', 'age', 'gender', 'birthDate', 'location'];
+    const hasChanges = keysToCompare.some((k) => (initialForm as any)[k] !== (formData as any)[k]);
+    if (!hasChanges) {
+      toast.info('No se detectaron cambios en el perfil');
+      return;
+    }
     // Validación de todos los campos
     const newErrors = validateProfile(formData);
 
@@ -126,9 +187,9 @@ export default function PerfilPage() {
 
     if (success) {
       setIsEditing(false);
-      alert('Perfil actualizado correctamente');
+      toast.success('Perfil actualizado correctamente');
     } else {
-      alert(error || 'Error al actualizar el perfil');
+      toast.error(error || 'Error al actualizar el perfil');
       console.error('Detalles del error:', error);
     }
   };
@@ -161,7 +222,7 @@ export default function PerfilPage() {
     if (success) {
       setIsModalOpen(false);
       setPasswords({ password: '', confirm: '' });
-      alert('Contraseña actualizada. Debe iniciar sesión nuevamente.');
+      toast.success('Contraseña actualizada. Debe iniciar sesión nuevamente.');
       logout();
     } else {
       setPasswordError(error || 'Error al actualizar la contraseña');
@@ -187,10 +248,10 @@ export default function PerfilPage() {
             <label className="block text-sm font-medium mb-1">Nombre</label>
             <input
               name="name"
-              className="border rounded px-2 py-1 w-full"
+              className={`border rounded px-2 py-1 w-full ${!isEditing ? 'bg-gray-100 text-gray-500' : ''}`}
               value={formData.name}
               onChange={handleChange}
-              readOnly={!isEditing}
+              disabled={!isEditing}
               autoComplete="off"
             />
             {errors.name && <span className="text-red-500 text-xs">{errors.name}</span>}
@@ -200,10 +261,10 @@ export default function PerfilPage() {
             <label className="block text-sm font-medium mb-1">Apellido</label>
             <input
               name="lastName"
-              className="border rounded px-2 py-1 w-full"
+              className={`border rounded px-2 py-1 w-full ${!isEditing ? 'bg-gray-100 text-gray-500' : ''}`}
               value={formData.lastName}
               onChange={handleChange}
-              readOnly={!isEditing}
+              disabled={!isEditing}
               autoComplete="off"
             />
             {errors.lastName && <span className="text-red-500 text-xs">{errors.lastName}</span>}
@@ -215,10 +276,10 @@ export default function PerfilPage() {
               <span className="inline-flex items-center px-2 bg-gray-100 border border-r-0 border-gray-300 rounded-l">+58</span>
               <input
                 name="phone"
-                className="border rounded-r px-2 py-1 w-full"
+                className={`border rounded-r px-2 py-1 w-full ${!isEditing ? 'bg-gray-100 text-gray-500' : ''}`}
                 value={formData.phone}
                 onChange={handleChange}
-                readOnly={!isEditing}
+                disabled={!isEditing}
                 maxLength={10}
                 placeholder="Ej: 4121234567"
                 autoComplete="off"
@@ -232,22 +293,24 @@ export default function PerfilPage() {
             <input
               type="number"
               name="age"
-              className="border rounded px-2 py-1 w-full"
+              className="border rounded px-2 py-1 w-full bg-gray-100 text-gray-500"
               value={formData.age}
               onChange={handleChange}
-              readOnly={!isEditing}
+              disabled
+              readOnly
+              aria-readonly="true"
               min={18}
               max={95}
               autoComplete="off"
             />
             {errors.age && <span className="text-red-500 text-xs">{errors.age}</span>}
           </div>
-          {/* Sexo */}
-          <div>
+          {/* Genero */}
+            <div>
             <label className="block text-sm font-medium mb-1">Sexo</label>
             <select
               name="gender"
-              className="border rounded px-2 py-1 w-full"
+              className={`border rounded px-2 py-1 w-full ${!isEditing ? 'bg-gray-100 text-gray-500' : ''}`}
               value={formData.gender}
               onChange={handleChange}
               disabled={!isEditing}
@@ -257,18 +320,20 @@ export default function PerfilPage() {
               <option value="Femenino">Femenino</option>
               <option value="Otro">Otro</option>
             </select>
-          </div>
+            {errors.gender && <span className="text-red-500 text-xs">{errors.gender}</span>}
+            </div>
           {/* Fecha de nacimiento */}
           <div>
             <label className="block text-sm font-medium mb-1">Fecha de nacimiento</label>
             <input
               type="date"
               name="birthDate"
-              className="border rounded px-2 py-1 w-full"
+              className={`border rounded px-2 py-1 w-full ${!isEditing ? 'bg-gray-100 text-gray-500' : ''}`}
               value={formData.birthDate}
               onChange={handleChange}
-              readOnly={!isEditing}
-              max={formatDateForInput(new Date().toISOString())}
+              disabled={!isEditing}
+              max={formatDateForInput(new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString())}
+              min={formatDateForInput(new Date(new Date().setFullYear(new Date().getFullYear() - 100)).toISOString())}
             />
             {errors.birthDate && <span className="text-red-500 text-xs">{errors.birthDate}</span>}
           </div>
@@ -277,17 +342,17 @@ export default function PerfilPage() {
             <label className="block text-sm font-medium mb-1">Lugar de residencia</label>
             <input
               name="location"
-              className="border rounded px-2 py-1 w-full"
+              className={`border rounded px-2 py-1 w-full ${!isEditing ? 'bg-gray-100 text-gray-500' : ''}`}
               value={formData.location}
               onChange={handleChange}
-              readOnly={!isEditing}
+              disabled={!isEditing}
             />
           </div>
           {/* Email */}
           <div>
             <label className="block text-sm font-medium mb-1">Email</label>
             <input
-              className="border rounded px-2 py-1 w-full bg-gray-100"
+              className="border rounded px-2 py-1 w-full bg-gray-100 text-gray-500"
               value={formData.email}
               disabled
             />
@@ -296,7 +361,7 @@ export default function PerfilPage() {
           <div>
             <label className="block text-sm font-medium mb-1">Rol</label>
             <input
-              className="border rounded px-2 py-1 w-full bg-gray-100"
+              className="border rounded px-2 py-1 w-full bg-gray-100 text-gray-500"
               value={formData.role}
               disabled
             />

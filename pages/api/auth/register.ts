@@ -33,7 +33,7 @@ export default async function handler(
     // Crear nuevo usuario
     const [newUser] = await sql`
       INSERT INTO users (name, email, password, role)
-      VALUES (${name}, ${email}, ${hashedPassword}, 'editor')
+      VALUES (${name}, ${email}, ${hashedPassword}, 'customer')
       RETURNING id, name, email, role
     `;
 

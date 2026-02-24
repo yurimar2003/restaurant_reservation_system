@@ -6,7 +6,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useAuth } from "../components/AuthProvider";
 import { validateReservation } from "../lib/validations/reservation"; 
 import { sanitizeNameInput, sanitizePhoneInput, validateRealTime } from "../lib/validations";
-import Alert from "../components/Alert";
+import { toast } from 'sonner';
 
 const initialFormData = {
     name: '',
@@ -28,7 +28,7 @@ const initialFormData = {
 };
 
 const ReservationsPage = () => {
-    const [alert, setAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
+    // usamos Sonner `toast` para notificaciones
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [formData, setFormData] = useState(initialFormData);
 
@@ -176,7 +176,7 @@ const ReservationsPage = () => {
             });
             const data = await res.json();
             if (data.success) {
-                setAlert({ type: "success", message: "¡Reserva realizada con éxito!" });
+                toast.success('¡Reserva realizada con éxito!');
                 setFormData((prev) => ({
                     ...prev,
                     guests: 1,
@@ -193,12 +193,11 @@ const ReservationsPage = () => {
                     acceptPolicies: false,
                     // Los datos del usuario (name, lastName, phone, email) se mantienen igual
                 }));
-                setTimeout(() => setAlert(null), 5000);
             } else {
-                setAlert({ type: "error", message: "Error al guardar la reserva: " + (data.error || "") });
+                toast.error('Error al guardar la reserva: ' + (data.error || ""));
             }
         } catch (err) {
-            setAlert({ type: "error", message: "Error de conexión al guardar la reserva" });
+            toast.error('Error de conexión al guardar la reserva');
         }
     };
 
@@ -211,13 +210,7 @@ const ReservationsPage = () => {
 
     return (
         <div className="max-w-6xl mx-auto p-6">
-            {alert && (
-                <Alert
-                    type={alert.type}
-                    message={alert.message}
-                    onClose={() => setAlert(null)}
-                />
-            )}
+            {/* Sonner `Toaster` se muestra globalmente en ClientLayout */}
             {/* Sección de Información Básica */}
             <div className="text-center mb-8">
                 <img src="/customers/Logo_horizontal.png" alt="Logo del Restaurante" className="mx-auto w-auto h-24 mb-4" />
